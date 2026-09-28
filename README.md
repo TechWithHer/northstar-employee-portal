@@ -27,9 +27,7 @@ We don't want the database directly exposed to the internet. So two subnets with
 
 **`WorldConnection`**
 
-Attached to `Rabbit World`.
-
-**Why:** Provides a path between the VPC and the public internet.
+Attached to `Rabbit World` as it provides a path between the VPC and the public internet.
 
 ---
 
@@ -129,13 +127,13 @@ Locality1
 Private IP:
 
 ```text
-10.0.13.249
+10.0.xx.xxx
 ```
 
 Public IP:
 
 ```text
-13.206.186.228
+13.xxx.xxx.xxx
 ```
 
 **Why:** This represents our application server.
@@ -171,7 +169,7 @@ Locality2
 Private IP:
 
 ```text
-10.0.55.176
+10.0.xx.xxx
 ```
 
 **No public IP.**
@@ -188,7 +186,7 @@ We intentionally don't expose it directly to the internet.
 
 Warehouse was private and initially had **no internet route**.
 
-SSM couldn't communicate with AWS Systems Manager.
+SSM was the only way to access it, however, couldn't communicate with AWS Systems Manager.
 
 We created:
 
@@ -227,7 +225,7 @@ curl https://checkip.amazonaws.com
 returned:
 
 ```text
-13.232.133.242
+13.xx.xxx.xxx
 ```
 
 That's the NAT Gateway's public IP.
