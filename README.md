@@ -8,7 +8,7 @@
 CIDR: 10.0.0.0/18
 ```
 
-**Why:** This is our isolated AWS network where the application and database will live.
+This is our isolated AWS network where the application and database will live.
 
 ---
 
@@ -19,7 +19,7 @@ CIDR: 10.0.0.0/18
 | `Locality1` | `10.0.0.0/19`  | Public / application |
 | `Locality2` | `10.0.32.0/19` | Private / database   |
 
-**Why:** We don't want the database directly exposed to the internet.
+We don't want the database directly exposed to the internet. So two subnets within one VPC. Availability zones will be the same
 
 ---
 
@@ -80,7 +80,7 @@ The NAT route allows private resources to **initiate outbound internet traffic**
 
 # Security Groups
 
-### 6. `Entry_rules_1` — House
+### 6. `Entry_rules_1` — House (EC2 Instance in Public Subnet)
 
 Inbound:
 
