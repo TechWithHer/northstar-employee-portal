@@ -1,15 +1,15 @@
-
 from flask import Flask, request, redirect, render_template
 import pymysql
 import boto3
 import json
+
 
 app = Flask(__name__)
 
 
 # =========================================================
 # DATABASE CONNECTION
-# Credentials are retrieved from AWS Secrets Manager
+# Credentials retrieved from AWS Secrets Manager
 # House EC2 authenticates using Northstar-House-App-Role
 # =========================================================
 
@@ -46,59 +46,11 @@ def home():
 
     employee_id = request.args.get("employee_id")
 
+    # No employee searched yet
     if not employee_id:
         return render_template("home.html")
 
-    try:
-
-        with connection.cursor() as cursor:
-
-            cursor.execute(
-                """
-                SELECT
-                    employee_id,
-                    full_name,
-                    email,
-                    phone,
-                    department,
-                    job_role,
-                    location,
-                    employment_status,
-                    joining_date
-                FROM employees
-                WHERE employee_id = %s
-                """,
-                (employee_id,)
-            )
-
-            employee = cursor.fetchone()
-
-    finally:
-        connection.close()
-
-    if not employee:
-
-        return f"""
-        <h2>Employee {employee_id} not found.</h2>
-
-        <h3>Search Employee</h3>
-
-        <form method="GET">
-
-            <label>Employee ID:</label>
-            <input type="number" name="employee_id" required>
-
-            <button type="submit">Search</button>
-
-        </form>
-
-        <br>
-
-        <a href="/employees">View All Employees</a>
-        <br><br>
-        <a href="/add">Add Employee</a>
-        """
-
+    # Employee ID exists, so connect to database
     connection = get_connection()
 
     try:
@@ -128,16 +80,22 @@ def home():
     finally:
         connection.close()
 
+    # Employee does not exist
     if not employee:
 
         return f"""
+        <h1>Northstar Employee Records Portal</h1>
+
         <h2>Employee {employee_id} not found.</h2>
 
         <a href="/">Search Again</a>
+
         <br><br>
+
         <a href="/employees">View All Employees</a>
         """
 
+    # Employee found
     return f"""
     <h1>Northstar Employee Records Portal</h1>
 
@@ -349,10 +307,8 @@ def add_employee():
         Employment Status:
 
         <select name="employment_status">
-
             <option value="Active">Active</option>
             <option value="Inactive">Inactive</option>
-
         </select>
 
         <br><br>
@@ -362,13 +318,17 @@ def add_employee():
 
         <br><br>
 
-        <button type="submit">Add Employee</button>
+        <button type="submit">
+            Add Employee
+        </button>
 
     </form>
 
     <br>
 
-    <a href="/employees">Back to Employees</a>
+    <a href="/employees">
+        Back to Employees
+    </a>
     """
 
 
@@ -384,6 +344,10 @@ def edit_employee(employee_id):
     try:
 
         with connection.cursor() as cursor:
+
+            # -------------------------
+            # UPDATE EMPLOYEE
+            # -------------------------
 
             if request.method == "POST":
 
@@ -425,7 +389,13 @@ def edit_employee(employee_id):
 
                 connection.commit()
 
-                return redirect(f"/?employee_id={employee_id}")
+                return redirect(
+                    f"/?employee_id={employee_id}"
+                )
+
+            # -------------------------
+            # LOAD EMPLOYEE
+            # -------------------------
 
             cursor.execute(
                 """
@@ -454,7 +424,10 @@ def edit_employee(employee_id):
 
         return """
         <h2>Employee not found.</h2>
-        <a href="/employees">Back to Employees</a>
+
+        <a href="/employees">
+            Back to Employees
+        </a>
         """
 
     active_selected = (
@@ -536,11 +509,17 @@ def edit_employee(employee_id):
 
         <select name="employment_status">
 
-            <option value="Active" {active_selected}>
+            <option
+                value="Active"
+                {active_selected}
+            >
                 Active
             </option>
 
-            <option value="Inactive" {inactive_selected}>
+            <option
+                value="Inactive"
+                {inactive_selected}
+            >
                 Inactive
             </option>
 
@@ -576,7 +555,10 @@ def edit_employee(employee_id):
 # DELETE EMPLOYEE
 # =========================================================
 
-@app.route("/delete/<int:employee_id>", methods=["GET", "POST"])
+@app.route(
+    "/delete/<int:employee_id>",
+    methods=["GET", "POST"]
+)
 def delete_employee(employee_id):
 
     connection = get_connection()
@@ -587,7 +569,9 @@ def delete_employee(employee_id):
 
             cursor.execute(
                 """
-                SELECT employee_id, full_name
+                SELECT
+                    employee_id,
+                    full_name
                 FROM employees
                 WHERE employee_id = %s
                 """,
@@ -600,7 +584,10 @@ def delete_employee(employee_id):
 
                 return """
                 <h2>Employee not found.</h2>
-                <a href="/employees">Back to Employees</a>
+
+                <a href="/employees">
+                    Back to Employees
+                </a>
                 """
 
             if request.method == "POST":
