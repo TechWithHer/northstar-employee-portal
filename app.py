@@ -1,5 +1,5 @@
 
-from flask import Flask, request, redirect
+from flask import Flask, request, redirect, render_template
 import pymysql
 import boto3
 import json
@@ -47,9 +47,39 @@ def home():
     employee_id = request.args.get("employee_id")
 
     if not employee_id:
+        return render_template("home.html")
 
-        return """
-        <h1>Northstar Employee Records Portal</h1>
+    try:
+
+        with connection.cursor() as cursor:
+
+            cursor.execute(
+                """
+                SELECT
+                    employee_id,
+                    full_name,
+                    email,
+                    phone,
+                    department,
+                    job_role,
+                    location,
+                    employment_status,
+                    joining_date
+                FROM employees
+                WHERE employee_id = %s
+                """,
+                (employee_id,)
+            )
+
+            employee = cursor.fetchone()
+
+    finally:
+        connection.close()
+
+    if not employee:
+
+        return f"""
+        <h2>Employee {employee_id} not found.</h2>
 
         <h3>Search Employee</h3>
 
