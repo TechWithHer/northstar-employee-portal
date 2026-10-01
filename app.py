@@ -187,7 +187,7 @@ def add_employee():
 
         return redirect("/employees")
 
-    return render_template("add_employee.html")
+    return render_template("add.html")
 
 
 # =========================================================
@@ -279,7 +279,7 @@ def edit_employee(employee_id):
         return redirect("/employees")
 
     return render_template(
-        "edit_employee.html",
+        "edit.html",
         employee=employee
     )
 
@@ -334,7 +334,7 @@ def delete_employee(employee_id):
         connection.close()
 
     return render_template(
-        "delete_employee.html",
+        "delete.html",
         employee=employee
     )
 
