@@ -1,19 +1,29 @@
 {% extends "base.html" %}
 
+
 {% block title %}
+
 Home | Northstar Employee Records Portal
+
 {% endblock %}
 
 
 {% block content %}
 
+
 <h2>Employee Search</h2>
 
-<p>Search for an employee using their Employee ID.</p>
+
+<p>
+    Search for an employee using their Employee ID.
+</p>
+
 
 <form method="GET" action="/">
 
-    <label for="employee_id">Employee ID</label>
+    <label for="employee_id">
+        Employee ID
+    </label>
 
     <input
         type="number"
@@ -27,5 +37,83 @@ Home | Northstar Employee Records Portal
     </button>
 
 </form>
+
+
+{% if searched_id %}
+
+
+    {% if employee %}
+
+        <div class="employee-card">
+
+            <h2>Employee Details</h2>
+
+            <p>
+                <strong>Employee ID:</strong>
+                {{ employee[0] }}
+            </p>
+
+            <p>
+                <strong>Name:</strong>
+                {{ employee[1] }}
+            </p>
+
+            <p>
+                <strong>Email:</strong>
+                {{ employee[2] }}
+            </p>
+
+            <p>
+                <strong>Phone:</strong>
+                {{ employee[3] or "-" }}
+            </p>
+
+            <p>
+                <strong>Department:</strong>
+                {{ employee[4] or "-" }}
+            </p>
+
+            <p>
+                <strong>Job Role:</strong>
+                {{ employee[5] or "-" }}
+            </p>
+
+            <p>
+                <strong>Location:</strong>
+                {{ employee[6] or "-" }}
+            </p>
+
+            <p>
+                <strong>Status:</strong>
+                {{ employee[7] }}
+            </p>
+
+            <p>
+                <strong>Joining Date:</strong>
+                {{ employee[8] or "-" }}
+            </p>
+
+            <a href="/edit/{{ employee[0] }}">
+                Edit Employee
+            </a>
+
+        </div>
+
+
+    {% else %}
+
+        <div class="message">
+
+            <h3>
+                Employee {{ searched_id }} not found.
+            </h3>
+
+        </div>
+
+    {% endif %}
+
+
+{% endif %}
+
 
 {% endblock %}

@@ -9,8 +9,7 @@ app = Flask(__name__)
 
 # =========================================================
 # DATABASE CONNECTION
-# Credentials retrieved from AWS Secrets Manager
-# House EC2 authenticates using Northstar-House-App-Role
+# AWS Secrets Manager + EC2 IAM Role
 # =========================================================
 
 def get_connection():
@@ -46,11 +45,14 @@ def home():
 
     employee_id = request.args.get("employee_id")
 
-    # No employee searched yet
+    # User has not searched yet
     if not employee_id:
-        return render_template("home.html")
+        return render_template(
+            "home.html",
+            employee=None,
+            searched_id=None
+        )
 
-    # Employee ID exists, so connect to database
     connection = get_connection()
 
     try:
@@ -80,49 +82,11 @@ def home():
     finally:
         connection.close()
 
-    # Employee does not exist
-    if not employee:
-
-        return f"""
-        <h1>Northstar Employee Records Portal</h1>
-
-        <h2>Employee {employee_id} not found.</h2>
-
-        <a href="/">Search Again</a>
-
-        <br><br>
-
-        <a href="/employees">View All Employees</a>
-        """
-
-    # Employee found
-    return f"""
-    <h1>Northstar Employee Records Portal</h1>
-
-    <h2>Employee Details</h2>
-
-    <p><strong>Employee ID:</strong> {employee[0]}</p>
-    <p><strong>Name:</strong> {employee[1]}</p>
-    <p><strong>Email:</strong> {employee[2]}</p>
-    <p><strong>Phone:</strong> {employee[3]}</p>
-    <p><strong>Department:</strong> {employee[4]}</p>
-    <p><strong>Job Role:</strong> {employee[5]}</p>
-    <p><strong>Location:</strong> {employee[6]}</p>
-    <p><strong>Status:</strong> {employee[7]}</p>
-    <p><strong>Joining Date:</strong> {employee[8]}</p>
-
-    <br>
-
-    <a href="/edit/{employee[0]}">Edit Employee</a>
-
-    <br><br>
-
-    <a href="/">Search Another Employee</a>
-
-    <br><br>
-
-    <a href="/employees">View All Employees</a>
-    """
+    return render_template(
+        "home.html",
+        employee=employee,
+        searched_id=employee_id
+    )
 
 
 # =========================================================
@@ -156,56 +120,10 @@ def employees():
     finally:
         connection.close()
 
-    rows = ""
-
-    for employee in employee_list:
-
-        rows += f"""
-        <tr>
-
-            <td>{employee[0]}</td>
-            <td>{employee[1]}</td>
-            <td>{employee[2]}</td>
-            <td>{employee[3]}</td>
-            <td>{employee[4]}</td>
-
-            <td>
-                <a href="/?employee_id={employee[0]}">View</a>
-                |
-                <a href="/edit/{employee[0]}">Edit</a>
-                |
-                <a href="/delete/{employee[0]}">Delete</a>
-            </td>
-
-        </tr>
-        """
-
-    return f"""
-    <h1>Northstar Employee Records Portal</h1>
-
-    <h2>Employees</h2>
-
-    <a href="/">Search Employee</a>
-    |
-    <a href="/add">Add Employee</a>
-
-    <br><br>
-
-    <table border="1" cellpadding="8">
-
-        <tr>
-            <th>Employee ID</th>
-            <th>Name</th>
-            <th>Department</th>
-            <th>Job Role</th>
-            <th>Status</th>
-            <th>Actions</th>
-        </tr>
-
-        {rows}
-
-    </table>
-    """
+    return render_template(
+        "employees.html",
+        employees=employee_list
+    )
 
 
 # =========================================================
@@ -269,74 +187,17 @@ def add_employee():
 
         return redirect("/employees")
 
-    return """
-    <h1>Northstar Employee Records Portal</h1>
-
-    <h2>Add Employee</h2>
-
-    <form method="POST">
-
-        Employee ID:
-        <input type="number" name="employee_id" required>
-        <br><br>
-
-        Full Name:
-        <input type="text" name="full_name" required>
-        <br><br>
-
-        Email:
-        <input type="email" name="email" required>
-        <br><br>
-
-        Phone:
-        <input type="text" name="phone">
-        <br><br>
-
-        Department:
-        <input type="text" name="department">
-        <br><br>
-
-        Job Role:
-        <input type="text" name="job_role">
-        <br><br>
-
-        Location:
-        <input type="text" name="location">
-        <br><br>
-
-        Employment Status:
-
-        <select name="employment_status">
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
-        </select>
-
-        <br><br>
-
-        Joining Date:
-        <input type="date" name="joining_date">
-
-        <br><br>
-
-        <button type="submit">
-            Add Employee
-        </button>
-
-    </form>
-
-    <br>
-
-    <a href="/employees">
-        Back to Employees
-    </a>
-    """
+    return render_template("add_employee.html")
 
 
 # =========================================================
 # EDIT EMPLOYEE
 # =========================================================
 
-@app.route("/edit/<int:employee_id>", methods=["GET", "POST"])
+@app.route(
+    "/edit/<int:employee_id>",
+    methods=["GET", "POST"]
+)
 def edit_employee(employee_id):
 
     connection = get_connection()
@@ -345,10 +206,7 @@ def edit_employee(employee_id):
 
         with connection.cursor() as cursor:
 
-            # -------------------------
             # UPDATE EMPLOYEE
-            # -------------------------
-
             if request.method == "POST":
 
                 full_name = request.form["full_name"]
@@ -393,10 +251,7 @@ def edit_employee(employee_id):
                     f"/?employee_id={employee_id}"
                 )
 
-            # -------------------------
             # LOAD EMPLOYEE
-            # -------------------------
-
             cursor.execute(
                 """
                 SELECT
@@ -421,134 +276,12 @@ def edit_employee(employee_id):
         connection.close()
 
     if not employee:
+        return redirect("/employees")
 
-        return """
-        <h2>Employee not found.</h2>
-
-        <a href="/employees">
-            Back to Employees
-        </a>
-        """
-
-    active_selected = (
-        "selected"
-        if employee[7] == "Active"
-        else ""
+    return render_template(
+        "edit_employee.html",
+        employee=employee
     )
-
-    inactive_selected = (
-        "selected"
-        if employee[7] == "Inactive"
-        else ""
-    )
-
-    return f"""
-    <h1>Northstar Employee Records Portal</h1>
-
-    <h2>Edit Employee {employee[0]}</h2>
-
-    <form method="POST">
-
-        Full Name:
-        <input
-            type="text"
-            name="full_name"
-            value="{employee[1]}"
-            required
-        >
-
-        <br><br>
-
-        Email:
-        <input
-            type="email"
-            name="email"
-            value="{employee[2]}"
-            required
-        >
-
-        <br><br>
-
-        Phone:
-        <input
-            type="text"
-            name="phone"
-            value="{employee[3] or ''}"
-        >
-
-        <br><br>
-
-        Department:
-        <input
-            type="text"
-            name="department"
-            value="{employee[4] or ''}"
-        >
-
-        <br><br>
-
-        Job Role:
-        <input
-            type="text"
-            name="job_role"
-            value="{employee[5] or ''}"
-        >
-
-        <br><br>
-
-        Location:
-        <input
-            type="text"
-            name="location"
-            value="{employee[6] or ''}"
-        >
-
-        <br><br>
-
-        Employment Status:
-
-        <select name="employment_status">
-
-            <option
-                value="Active"
-                {active_selected}
-            >
-                Active
-            </option>
-
-            <option
-                value="Inactive"
-                {inactive_selected}
-            >
-                Inactive
-            </option>
-
-        </select>
-
-        <br><br>
-
-        Joining Date:
-
-        <input
-            type="date"
-            name="joining_date"
-            value="{employee[8] or ''}"
-        >
-
-        <br><br>
-
-        <button type="submit">
-            Update Employee
-        </button>
-
-    </form>
-
-    <br>
-
-    <a href="/?employee_id={employee[0]}">
-        Cancel
-    </a>
-    """
 
 
 # =========================================================
@@ -581,14 +314,7 @@ def delete_employee(employee_id):
             employee = cursor.fetchone()
 
             if not employee:
-
-                return """
-                <h2>Employee not found.</h2>
-
-                <a href="/employees">
-                    Back to Employees
-                </a>
-                """
+                return redirect("/employees")
 
             if request.method == "POST":
 
@@ -607,31 +333,10 @@ def delete_employee(employee_id):
     finally:
         connection.close()
 
-    return f"""
-    <h1>Northstar Employee Records Portal</h1>
-
-    <h2>Delete Employee</h2>
-
-    <p>
-        Are you sure you want to delete
-        <strong>{employee[1]}</strong>
-        (Employee ID: {employee[0]})?
-    </p>
-
-    <form method="POST">
-
-        <button type="submit">
-            Yes, Delete Employee
-        </button>
-
-    </form>
-
-    <br>
-
-    <a href="/employees">
-        Cancel
-    </a>
-    """
+    return render_template(
+        "delete_employee.html",
+        employee=employee
+    )
 
 
 # =========================================================

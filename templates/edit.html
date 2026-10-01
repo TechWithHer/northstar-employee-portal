@@ -1,1 +1,149 @@
+{% extends "base.html" %}
 
+
+{% block title %}
+
+Edit Employee | Northstar
+
+{% endblock %}
+
+
+{% block content %}
+
+
+<h2>
+    Edit Employee {{ employee[0] }}
+</h2>
+
+
+<form method="POST">
+
+
+    <label>
+        Full Name
+    </label>
+
+    <input
+        type="text"
+        name="full_name"
+        value="{{ employee[1] }}"
+        required
+    >
+
+
+    <label>
+        Email
+    </label>
+
+    <input
+        type="email"
+        name="email"
+        value="{{ employee[2] }}"
+        required
+    >
+
+
+    <label>
+        Phone
+    </label>
+
+    <input
+        type="text"
+        name="phone"
+        value="{{ employee[3] or '' }}"
+    >
+
+
+    <label>
+        Department
+    </label>
+
+    <input
+        type="text"
+        name="department"
+        value="{{ employee[4] or '' }}"
+    >
+
+
+    <label>
+        Job Role
+    </label>
+
+    <input
+        type="text"
+        name="job_role"
+        value="{{ employee[5] or '' }}"
+    >
+
+
+    <label>
+        Location
+    </label>
+
+    <input
+        type="text"
+        name="location"
+        value="{{ employee[6] or '' }}"
+    >
+
+
+    <label>
+        Employment Status
+    </label>
+
+
+    <select name="employment_status">
+
+
+        <option
+            value="Active"
+            {% if employee[7] == "Active" %}
+            selected
+            {% endif %}
+        >
+            Active
+        </option>
+
+
+        <option
+            value="Inactive"
+            {% if employee[7] == "Inactive" %}
+            selected
+            {% endif %}
+        >
+            Inactive
+        </option>
+
+
+    </select>
+
+
+    <label>
+        Joining Date
+    </label>
+
+
+    <input
+        type="date"
+        name="joining_date"
+        value="{{ employee[8] or '' }}"
+    >
+
+
+    <button type="submit">
+        Update Employee
+    </button>
+
+
+</form>
+
+
+<br>
+
+
+<a href="/?employee_id={{ employee[0] }}">
+    Cancel
+</a>
+
+
+{% endblock %}

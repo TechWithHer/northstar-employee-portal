@@ -1,1 +1,48 @@
 
+{% extends "base.html" %}
+
+
+{% block title %}
+
+Delete Employee | Northstar
+
+{% endblock %}
+
+
+{% block content %}
+
+
+<h2>Delete Employee</h2>
+
+
+<p>
+
+    Are you sure you want to delete
+
+    <strong>
+        {{ employee[1] }}
+    </strong>
+
+    (Employee ID: {{ employee[0] }})?
+
+</p>
+
+
+<form method="POST">
+
+    <button type="submit">
+        Yes, Delete Employee
+    </button>
+
+</form>
+
+
+<br>
+
+
+<a href="/employees">
+    Cancel
+</a>
+
+
+{% endblock %}

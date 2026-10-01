@@ -1,1 +1,104 @@
+{% extends "base.html" %}
 
+
+{% block title %}
+
+Employees | Northstar
+
+{% endblock %}
+
+
+{% block content %}
+
+
+<h2>Employees</h2>
+
+
+<p>
+    Northstar Logistics employee directory.
+</p>
+
+
+<table>
+
+    <thead>
+
+        <tr>
+
+            <th>Employee ID</th>
+
+            <th>Name</th>
+
+            <th>Department</th>
+
+            <th>Job Role</th>
+
+            <th>Status</th>
+
+            <th>Actions</th>
+
+        </tr>
+
+    </thead>
+
+
+    <tbody>
+
+
+        {% for employee in employees %}
+
+
+        <tr>
+
+            <td>
+                {{ employee[0] }}
+            </td>
+
+            <td>
+                {{ employee[1] }}
+            </td>
+
+            <td>
+                {{ employee[2] }}
+            </td>
+
+            <td>
+                {{ employee[3] }}
+            </td>
+
+            <td>
+                {{ employee[4] }}
+            </td>
+
+            <td>
+
+                <a href="/?employee_id={{ employee[0] }}">
+                    View
+                </a>
+
+                |
+
+                <a href="/edit/{{ employee[0] }}">
+                    Edit
+                </a>
+
+                |
+
+                <a href="/delete/{{ employee[0] }}">
+                    Delete
+                </a>
+
+            </td>
+
+        </tr>
+
+
+        {% endfor %}
+
+
+    </tbody>
+
+</table>
+
+
+{% endblock %}

@@ -1,1 +1,129 @@
 
+{% extends "base.html" %}
+
+
+{% block title %}
+
+Add Employee | Northstar
+
+{% endblock %}
+
+
+{% block content %}
+
+
+<h2>Add Employee</h2>
+
+
+<form method="POST">
+
+
+    <label>
+        Employee ID
+    </label>
+
+    <input
+        type="number"
+        name="employee_id"
+        required
+    >
+
+
+    <label>
+        Full Name
+    </label>
+
+    <input
+        type="text"
+        name="full_name"
+        required
+    >
+
+
+    <label>
+        Email
+    </label>
+
+    <input
+        type="email"
+        name="email"
+        required
+    >
+
+
+    <label>
+        Phone
+    </label>
+
+    <input
+        type="text"
+        name="phone"
+    >
+
+
+    <label>
+        Department
+    </label>
+
+    <input
+        type="text"
+        name="department"
+    >
+
+
+    <label>
+        Job Role
+    </label>
+
+    <input
+        type="text"
+        name="job_role"
+    >
+
+
+    <label>
+        Location
+    </label>
+
+    <input
+        type="text"
+        name="location"
+    >
+
+
+    <label>
+        Employment Status
+    </label>
+
+    <select name="employment_status">
+
+        <option value="Active">
+            Active
+        </option>
+
+        <option value="Inactive">
+            Inactive
+        </option>
+
+    </select>
+
+
+    <label>
+        Joining Date
+    </label>
+
+    <input
+        type="date"
+        name="joining_date"
+    >
+
+
+    <button type="submit">
+        Add Employee
+    </button>
+
+
+</form>
+
+
+{% endblock %}
