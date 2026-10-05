@@ -27,3 +27,25 @@ jobs:
       - name: Validate Python syntax
         run: |
           python -m py_compile app.py
+
+  deploy:
+    name: Deploy to House
+    runs-on: ubuntu-latest
+    needs: ci
+
+    steps:
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/northstar_key
+          chmod 600 ~/.ssh/northstar_key
+          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy application
+        run: |
+          ssh -i ~/.ssh/northstar_key "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" << 'EOF'
+            cd /home/ubuntu/northstar-employee-portal
+            git pull origin main
+            sudo systemctl restart northstar
+            sudo systemctl is-active --quiet northstar
+          EOF
