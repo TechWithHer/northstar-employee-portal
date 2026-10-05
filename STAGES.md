@@ -832,4 +832,3 @@ DOCUMENTATION
 That sequence itself is useful to remember in an interview because you can explain Northstar as an **evolution of a deployment**, rather than throwing 15 AWS/Linux buzzwords at the interviewer.
 
 Next, we pick up **exactly at Stage 12: `.github/workflows/deploy.yml`**.
-fds s
