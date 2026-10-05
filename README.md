@@ -1,273 +1,298 @@
-```markdown
 # Northstar Employee Records Portal
-### AWS Cloud & DevOps Implementation Case Study
+
+A sanitized portfolio representation of a real-world client
+implementation, demonstrating AWS networking, secure application
+deployment, CI/CD, database isolation, secrets management, and
+infrastructure monitoring.
 
 > **Confidentiality & Data Privacy Notice**
 >
-> This project is based on a real-world client implementation. The repository has been recreated and sanitized for portfolio and technical demonstration purposes.
+> This project is based on a real-world client implementation and has
+> been recreated and sanitized for portfolio and technical demonstration
+> purposes. The actual client name, employee information, credentials,
+> infrastructure identifiers, and other identifying information are not
+> disclosed.
 >
-> To protect client confidentiality and personal data, the actual client name, employee information, credentials, infrastructure identifiers, and other identifying information have not been disclosed.
->
-> **Northstar Logistics Pte. Ltd.** is a fictional organization name used solely for this case study. Employee records used in the demonstration are synthetic.
->
-> The implementation presented here demonstrates the technical architecture, Cloud/DevOps practices, deployment approach, security controls, and operational concepts used in the project, while taking client confidentiality and applicable data-protection considerations, including Singapore's PDPA, into account.
+> **Northstar Logistics Pte. Ltd.** is a fictional alias used for this
+> portfolio version. All employee records shown in the project are
+> synthetic. The implementation is presented with client
+> confidentiality, security, and applicable Singapore data-protection
+> considerations in mind.
 
----
+------------------------------------------------------------------------
 
 ## 1. Project Overview
 
-The **Northstar Employee Records Portal (NERP)** is an anonymized representation of a real-world employee records management implementation.
+Northstar Employee Records Portal (NERP) is a small internal
+employee-management application deployed on AWS.
 
-The objective was not simply to host a web application, but to build a structured AWS environment around it with clear separation between the application and database layers, controlled network access, secure credential management, automated application startup, reverse proxying, CI/CD, monitoring, and operational troubleshooting.
+The project was built to demonstrate the complete operational path of an
+application rather than only application development:
 
-The application provides basic employee record management capabilities while keeping the database isolated from direct Internet access.
+-   AWS VPC and subnet design
+-   Public and private workload separation
+-   Security Group-based access control
+-   Linux administration
+-   Nginx reverse proxy
+-   Gunicorn application server
+-   Flask/Jinja application deployment
+-   MySQL database connectivity
+-   AWS IAM roles
+-   AWS Secrets Manager
+-   GitHub Actions CI/CD
+-   CloudWatch monitoring and SNS alerting
+-   Infrastructure troubleshooting and security cleanup
 
-### Key Engineering Areas
+The application supports employee search and basic CRUD operations
+against a MySQL database.
 
-- AWS VPC architecture
-- Public/private subnet separation
-- EC2 application and database tiers
-- Security Groups and controlled network access
-- Flask/Jinja web application
-- Private MySQL database
-- AWS Secrets Manager
-- IAM role-based AWS access
-- Gunicorn application server
-- systemd process management
-- Nginx reverse proxy
-- Git and GitHub source control
-- GitHub Actions CI/CD
-- Amazon CloudWatch monitoring
-- Linux troubleshooting and service operations
+------------------------------------------------------------------------
 
----
+## 2. Architecture
 
-# 2. High-Level Architecture
+``` text
+                              INTERNET
+                                  |
+                                  | HTTP :80
+                                  v
+                         Internet Gateway
+                         "WorldConnection"
+                                  |
+                                  v
++------------------------------------------------------------------+
+|                    Rabbit World VPC                               |
+|                       10.0.0.0/18                                 |
+|                                                                  |
+|   +----------------------------+                                  |
+|   | Public Subnet: Locality1   |                                  |
+|   |                            |                                  |
+|   |          House EC2         |                                  |
+|   |              |             |                                  |
+|   |           Nginx :80        |                                  |
+|   |              |             |                                  |
+|   |       127.0.0.1:5000       |                                  |
+|   |              |             |                                  |
+|   |          Gunicorn          |                                  |
+|   |              |             |                                  |
+|   |          Flask/Jinja       |                                  |
+|   +--------------|-------------+                                  |
+|                  |                                                |
+|                  | Private VPC traffic                            |
+|                  | TCP :3306                                     |
+|                  v                                                |
+|   +----------------------------+                                  |
+|   | Private Subnet: Locality2  |                                  |
+|   |                            |                                  |
+|   |        Warehouse EC2       |                                  |
+|   |              |             |                                  |
+|   |         MySQL :3306        |                                  |
+|   |              |             |                                  |
+|   |       WAREHOUSE_APP        |                                  |
+|   +----------------------------+                                  |
+|                                                                  |
++------------------------------------------------------------------+
 
-```text
-                           INTERNET
-                              │
-                              │ HTTP/HTTPS
-                              ▼
-                     Internet Gateway
-                     "WorldConnection"
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────┐
-│                  Rabbit World VPC                   │
-│                     10.0.0.0/18                     │
-│                                                     │
-│  ┌──────────────────────────────┐                   │
-│  │     Locality1 - PUBLIC       │                   │
-│  │        10.0.0.0/19           │                   │
-│  │                              │                   │
-│  │          HOUSE EC2           │                   │
-│  │              │               │                   │
-│  │          Nginx :80           │                   │
-│  │              │               │                   │
-│  │       127.0.0.1:5000         │                   │
-│  │              │               │                   │
-│  │          Gunicorn            │                   │
-│  │         3 Workers            │                   │
-│  │              │               │                   │
-│  │              ▼               │                   │
-│  │        Flask + Jinja         │                   │
-│  └──────────────┬───────────────┘                   │
-│                 │                                   │
-│                 │ TCP 3306                          │
-│                 ▼                                   │
-│  ┌──────────────────────────────┐                   │
-│  │     Locality2 - PRIVATE      │                   │
-│  │        10.0.32.0/19          │                   │
-│  │                              │                   │
-│  │       WAREHOUSE EC2          │                   │
-│  │              │               │                   │
-│  │            MySQL             │                   │
-│  │              │               │                   │
-│  │       WAREHOUSE_APP          │                   │
-│  └──────────────────────────────┘                   │
-│                                                     │
-└─────────────────────────────────────────────────────┘
+House IAM Role
+      |
+      +------> AWS Secrets Manager
+               northstar/prod/database
+
+Developer
+   |
+   | git push
+   v
+GitHub
+   |
+   v
+GitHub Actions
+   |
+   +--> CI validation
+   |
+   +--> CD via SSH --> House --> restart northstar.service
+
+House EC2
+   |
+   v
+Amazon CloudWatch
+   |
+   v
+High CPU Alarm
+   |
+   v
+Amazon SNS --> Email notification
 ```
 
----
+------------------------------------------------------------------------
 
-# 3. Network Architecture
+## 3. AWS Network Design
 
-The AWS environment uses a custom VPC with separate public and private network tiers.
+### VPC
 
-## VPC
+The application is deployed inside a dedicated VPC:
 
-```text
-Name: Rabbit World
+``` text
+Rabbit World
 CIDR: 10.0.0.0/18
 ```
 
-The VPC provides the isolated network boundary for the application.
+The VPC is divided into public and private subnets.
 
-## Public Subnet
+### Public Subnet --- Locality1
 
-```text
-Name: Locality1
-CIDR: 10.0.0.0/19
+`House`, the application server, resides in the public subnet.
+
+Its route table contains the VPC local route and a default route through
+the Internet Gateway:
+
+``` text
+10.0.0.0/18 -> local
+0.0.0.0/0   -> Internet Gateway
 ```
 
-The public subnet contains the application server:
+This allows the web server to receive Internet traffic.
 
-```text
-House
+### Private Subnet --- Locality2
+
+`Warehouse`, the database server, resides in the private subnet.
+
+Its final route table contains only:
+
+``` text
+10.0.0.0/18 -> local
 ```
 
-The subnet uses a route table with Internet connectivity through the Internet Gateway.
+The database subnet therefore has no active default Internet route in
+the final project configuration.
 
-## Private Subnet
+A NAT Gateway was evaluated during the project but removed because it
+was unnecessary for the final application path and introduced additional
+cost. A stale NAT blackhole route was also removed during infrastructure
+cleanup.
 
-```text
-Name: Locality2
-CIDR: 10.0.32.0/19
+------------------------------------------------------------------------
+
+## 4. Security Groups
+
+### House --- Entry_rules_1
+
+House accepts public HTTP traffic for the application.
+
+``` text
+TCP 80 -> Internet
 ```
 
-The private subnet contains the database server:
+SSH access is currently required by the GitHub-hosted CI/CD deployment
+workflow. This is documented as a current lab limitation and is
+discussed under **Known Limitations and Production Improvements**.
 
-```text
-Warehouse
-```
+Gunicorn port `5000` is **not exposed through the Security Group**.
 
-The database is not intended to be directly accessible from the public Internet.
+### Warehouse --- Entry_rules_2
 
-## Internet Gateway
+The final database Security Group permits only MySQL traffic from
+resources associated with the House Security Group:
 
-```text
-WorldConnection
-```
-
-The Internet Gateway provides Internet connectivity to resources using the public routing configuration.
-
-## Routing
-
-### Public Route Table — `SecurityGuard1`
-
-```text
-10.0.0.0/18 → local
-0.0.0.0/0   → WorldConnection
-```
-
-### Private Route Table — `SecurityGuard2`
-
-The private application tier relies on VPC-local routing for communication with the application server.
-
-```text
-10.0.0.0/18 → local
-```
-
-This allows communication between the application and database tiers without exposing MySQL directly to the Internet.
-
----
-
-# 4. Security Group Design
-
-Security Groups provide resource-level traffic control.
-
-## Application Security Group
-
-```text
-Entry_rules_1
-```
-
-Required inbound access includes:
-
-| Port | Purpose | Source |
-|---|---|---|
-| 22 | SSH Administration | Restricted administrator IP |
-| 80 | HTTP | Internet |
-| 443 | HTTPS / future TLS support | Internet |
-
-Gunicorn port `5000` is **not exposed publicly**.
-
-## Database Security Group
-
-```text
-Entry_rules_2
-```
-
-MySQL traffic is allowed on:
-
-```text
+``` text
 TCP 3306
+Source: Entry_rules_1
 ```
 
-from the application Security Group.
+The database is therefore not directly exposed to the Internet.
 
-Conceptually:
+Temporary SSH, HTTPS, EC2 Instance Connect, and other experimental
+inbound rules were removed during the final security cleanup.
 
-```text
-Internet ──X──> MySQL :3306
+------------------------------------------------------------------------
 
-House ─────────> Warehouse :3306
+## 5. Application Stack
+
+The application stack on House is:
+
+``` text
+Nginx
+  |
+  v
+Gunicorn
+  |
+  v
+Flask
+  |
+  v
+Jinja templates
+  |
+  v
+PyMySQL
 ```
 
-This ensures the application can communicate with the database while preventing direct public database access.
+### Nginx
 
----
+Nginx is the public-facing web server and listens on port `80`.
 
-# 5. Application Layer
+Requests are reverse proxied to:
 
-The employee portal is implemented using:
-
-- Python
-- Flask
-- Jinja2
-- PyMySQL
-- HTML
-- CSS
-
-The application provides CRUD-style employee management functionality:
-
-```text
-Search Employee
-View Employees
-Add Employee
-Edit Employee
-Delete Employee
+``` text
+127.0.0.1:5000
 ```
 
-### Repository Structure
+### Gunicorn
 
-```text
-northstar-employee-portal/
-│
-├── static/
-│   └── style.css
-│
-├── templates/
-│   ├── add.html
-│   ├── base.html
-│   ├── delete.html
-│   ├── edit.html
-│   ├── employees.html
-│   └── home.html
-│
-├── app.py
-├── requirements.txt
-└── README.md
+Gunicorn runs the Flask application with three workers:
+
+``` text
+gunicorn --workers 3 --bind 127.0.0.1:5000 app:app
 ```
 
-Jinja templates provide the presentation layer while Flask handles routing and application logic.
+Binding Gunicorn to `127.0.0.1` means it is accessible only locally from
+House and cannot be reached directly from the Internet.
 
----
+Three workers are sufficient for the scope and traffic of this portfolio
+implementation. Production worker sizing should be based on CPU, memory,
+request characteristics, concurrency, database connections, and
+load-testing results.
 
-# 6. Database Layer
+### systemd
 
-MySQL runs on the private `Warehouse` EC2 instance.
+Gunicorn is managed by a systemd service named:
 
-```text
-Database: WAREHOUSE_APP
-Table: employees
+``` text
+northstar.service
 ```
 
-Example sanitized schema:
+This provides:
 
-```sql
+-   automatic application startup
+-   process supervision
+-   automatic restart
+-   centralized service status
+-   journal-based logging
+
+Useful operational commands include:
+
+``` bash
+sudo systemctl status northstar
+sudo systemctl restart northstar
+sudo journalctl -u northstar
+sudo journalctl -u northstar -f
+```
+
+------------------------------------------------------------------------
+
+## 6. Database
+
+The database runs on the private `Warehouse` EC2 instance using MySQL.
+
+Database:
+
+``` text
+WAREHOUSE_APP
+```
+
+The `employees` table stores synthetic employee records for the
+portfolio implementation.
+
+Example schema:
+
+``` sql
 CREATE TABLE employees (
     employee_id INT PRIMARY KEY,
     full_name VARCHAR(100) NOT NULL,
@@ -281,751 +306,609 @@ CREATE TABLE employees (
 );
 ```
 
-All employee records represented in this repository or portfolio demonstration are synthetic and do not represent actual client employees.
+The application uses parameterized SQL queries when interacting with
+employee records.
 
-The application communicates with MySQL using PyMySQL and parameterized SQL queries.
+------------------------------------------------------------------------
 
----
+## 7. Secrets Management and IAM
 
-# 7. Secrets Management
+Database credentials are not stored directly in the Flask source code.
 
-Database credentials are not hardcoded in the application.
+They are stored in AWS Secrets Manager:
 
-They are maintained in AWS Secrets Manager under a sanitized secret name:
-
-```text
+``` text
 northstar/prod/database
 ```
 
-The secret provides application configuration such as:
+The secret contains the database connection information required by the
+application.
 
-```text
-host
-username
-password
-database
-```
+House uses an EC2 IAM role:
 
-The application retrieves the secret at runtime using the AWS SDK for Python (`boto3`).
-
-```text
-Flask Application
-       │
-       ▼
-   IAM Role
-       │
-       ▼
-AWS Secrets Manager
-       │
-       ▼
-Database Credentials
-       │
-       ▼
-    PyMySQL
-       │
-       ▼
-Warehouse MySQL
-```
-
-No database passwords should be committed to the repository.
-
----
-
-# 8. IAM and AWS Authentication
-
-The application EC2 instance uses an IAM role:
-
-```text
+``` text
 Northstar-House-App-Role
 ```
 
-A dedicated policy:
+with a scoped policy that allows the application to retrieve the
+required database secret.
 
-```text
-Northstar-House-Database-Secret-Read
-```
+The authentication flow is:
 
-allows the application to retrieve the required database secret.
-
-The design avoids storing long-lived AWS access keys on the EC2 instance.
-
-Instead:
-
-```text
-EC2 Instance
-     │
-     ▼
-IAM Instance Role
-     │
-     ▼
-Temporary AWS Credentials
-     │
-     ▼
+``` text
+House EC2
+   |
+   | assumes IAM role automatically
+   v
+Northstar-House-App-Role
+   |
+   | secretsmanager:GetSecretValue
+   v
 AWS Secrets Manager
+   |
+   v
+Database credentials
+   |
+   v
+Flask / PyMySQL
+   |
+   v
+Warehouse :3306
 ```
 
-This provides a cleaner and more secure authentication mechanism for AWS service access.
+No `aws configure` credentials or long-lived AWS access keys are
+required by the application.
 
----
+------------------------------------------------------------------------
 
-# 9. Application Server — Gunicorn
+## 8. End-to-End Request Flow
 
-During initial development, the Flask development server was sufficient to validate the application.
+When a user searches for an employee:
 
-For the deployed environment, the application is served using **Gunicorn**, a Python WSGI application server.
-
-```text
-Gunicorn
-   │
-   ├── Worker 1
-   ├── Worker 2
-   └── Worker 3
-          │
-          ▼
-        Flask
-```
-
-Gunicorn runs with three workers and listens only on the EC2 instance's loopback interface:
-
-```bash
-gunicorn --workers 3 --bind 127.0.0.1:5000 app:app
-```
-
-Using:
-
-```text
-127.0.0.1:5000
-```
-
-means Gunicorn is available to Nginx on the same server but is not directly exposed through the instance's network interface.
-
----
-
-# 10. Process Management with systemd
-
-Running Gunicorn manually would require an administrator to reconnect to the server and restart the application whenever the EC2 instance restarted.
-
-To remove this dependency, Gunicorn is managed using a systemd service:
-
-```text
-northstar.service
-```
-
-The service provides:
-
-- Automatic application startup
-- Application restart capability
-- Process supervision
-- Boot-time startup
-- Centralized service logging
-
-The application lifecycle becomes:
-
-```text
-EC2 Starts
-    │
-    ▼
-systemd
-    │
-    ▼
-northstar.service
-    │
-    ▼
-Gunicorn
-    │
-    ▼
-Flask
-```
-
-Useful operational commands include:
-
-```bash
-sudo systemctl status northstar
-sudo systemctl restart northstar
-sudo journalctl -u northstar
-sudo journalctl -u northstar -f
-```
-
----
-
-# 11. Nginx Reverse Proxy
-
-Nginx provides the public-facing web-server layer.
-
-Nginx listens on standard HTTP port:
-
-```text
-80
-```
-
-and forwards requests internally to Gunicorn:
-
-```text
-127.0.0.1:5000
-```
-
-Request flow:
-
-```text
+``` text
 Browser
-   │
-   │ HTTP :80
-   ▼
-Nginx
-   │
-   │ proxy_pass
-   ▼
-127.0.0.1:5000
-   │
-   ▼
-Gunicorn
-   │
-   ▼
-Flask
-```
-
-Users therefore access the application using the standard web endpoint rather than connecting directly to the Gunicorn application server.
-
-This also provides an additional security boundary:
-
-```text
-Internet
-   │
-   │ :80
-   ▼
-Nginx
-   │
-   │ localhost only
-   ▼
-Gunicorn :5000
-```
-
-TCP port `5000` is not exposed through the application Security Group.
-
----
-
-# 12. End-to-End Request Flow
-
-A typical request passes through multiple infrastructure and application layers:
-
-```text
-User
- │
- ▼
-Internet
- │
- ▼
+   |
+   | HTTP :80
+   v
 Internet Gateway
- │
- ▼
-Public Subnet
- │
- ▼
-Application Security Group
- │
- ▼
-House EC2
- │
- ▼
+   |
+   v
+Entry_rules_1
+   |
+   v
+House
+   |
+   v
 Nginx :80
- │
- ▼
-Gunicorn 127.0.0.1:5000
- │
- ▼
-Flask / Jinja
- │
- ├──────────────► IAM Role
- │                    │
- │                    ▼
- │             Secrets Manager
- │                    │
- │             DB Credentials
- │                    │
- ▼                    │
-PyMySQL ◄─────────────┘
- │
- │ TCP :3306
- ▼
-VPC Local Routing
- │
- ▼
-Database Security Group
- │
- ▼
-Warehouse EC2
- │
- ▼
+   |
+   | reverse proxy
+   v
+127.0.0.1:5000
+   |
+   v
+Gunicorn
+   |
+   v
+Flask
+   |
+   +------> IAM Role ------> Secrets Manager
+   |
+   | TCP :3306
+   v
+Entry_rules_2
+   |
+   v
+Warehouse
+   |
+   v
 MySQL
- │
- ▼
-WAREHOUSE_APP
- │
- ▼
-employees
+   |
+   v
+Employee record
+   |
+   v
+Flask -> Jinja -> Gunicorn -> Nginx -> Browser
 ```
 
-The database response returns through the application, where Flask processes the result and Jinja renders the web page.
+House-to-Warehouse database traffic remains inside the VPC and uses the
+VPC local route. It does not require an Internet Gateway, NAT Gateway,
+or the VPC endpoints that were evaluated earlier in the project.
 
----
+------------------------------------------------------------------------
 
-# 13. CI/CD Pipeline
+## 9. CI/CD with GitHub Actions
 
-The application source is maintained using Git and GitHub.
+The repository uses GitHub Actions to validate and deploy changes pushed
+to the `main` branch.
 
-GitHub Actions provides the CI/CD workflow.
+### Continuous Integration
 
-```text
-Developer
-    │
-    │ git push
-    ▼
-GitHub Repository
-    │
-    ▼
+The CI job:
+
+1.  checks out the repository
+2.  creates a clean Ubuntu runner
+3.  installs Python 3.12
+4.  installs application dependencies
+5.  validates `app.py` using Python bytecode compilation
+
+``` text
+git push
+   |
+   v
 GitHub Actions
-    │
-    ├── Checkout Code
-    │
-    ├── Configure Python
-    │
-    ├── Install Dependencies
-    │
-    ├── Validate/Test
-    │
-    └── Continue only if CI succeeds
-    │
-    ▼
-Deployment
-    │
-    ▼
+   |
+   v
+Checkout
+   |
+   v
+Python 3.12
+   |
+   v
+Install dependencies
+   |
+   v
+python -m py_compile app.py
+```
+
+The CI runner is intentionally not given production database access
+merely to perform syntax validation.
+
+### Continuous Deployment
+
+Deployment runs only after CI succeeds.
+
+``` text
+CI success
+   |
+   v
+GitHub Actions
+   |
+   | SSH
+   v
+House
+   |
+   v
+git pull origin main
+   |
+   v
+restart northstar.service
+   |
+   v
+verify service is active
+```
+
+Repository secrets are used for deployment configuration:
+
+``` text
+EC2_HOST
+EC2_USER
+EC2_SSH_KEY
+```
+
+The private SSH key is stored as a GitHub Actions secret rather than
+committed to the repository.
+
+### CI/CD Troubleshooting Performed
+
+During implementation, the deployment pipeline exposed two useful
+operational failures:
+
+**GitHub runner could not reach House on TCP 22**
+
+The deployment failed during `ssh-keyscan`. Investigation showed that
+the Security Group allowed SSH only from the administrator's IP and not
+from the GitHub-hosted runner.
+
+**SSH private key failed with `error in libcrypto`**
+
+Network connectivity was working, but authentication failed because the
+multiline private key stored in the GitHub secret had not been
+reconstructed correctly. Replacing the secret with the complete OpenSSH
+private key, including its original line breaks, resolved the issue.
+
+------------------------------------------------------------------------
+
+## 10. Monitoring and Alerting
+
+Amazon CloudWatch is used for basic EC2 infrastructure monitoring.
+
+The project uses the standard EC2 `CPUUtilization` metric with basic
+monitoring.
+
+A CloudWatch alarm named:
+
+``` text
+Northstar-House-High-CPU
+```
+
+is configured to enter the alarm state when:
+
+``` text
+CPUUtilization > 70%
+for 2 consecutive 5-minute periods
+```
+
+Notification flow:
+
+``` text
 House EC2
-    │
-    ├── Update Application
-    ├── Install/Update Dependencies
-    ├── Restart northstar.service
-    └── Verify Application
+   |
+   v
+CloudWatch CPUUtilization
+   |
+   | > 70% for 2 x 5 min
+   v
+CloudWatch Alarm
+   |
+   v
+SNS topic: northstar-alerts
+   |
+   v
+Email notification
 ```
 
-Sensitive deployment information is maintained using GitHub Actions secrets rather than being committed to source control.
+Detailed EC2 monitoring was intentionally not enabled because one-minute
+infrastructure metrics were not necessary for the scope of this project.
 
-### Deployment Evolution
+Application and service troubleshooting currently uses systemd journal
+logs and Nginx logs rather than a centralized CloudWatch Logs pipeline.
 
-Originally:
+------------------------------------------------------------------------
 
-```text
-Developer
-   │
-   ▼
-git push
-   │
-   ▼
-GitHub
+## 11. Infrastructure Cleanup
 
-Manual:
-SSH → git pull → restart application
+The project included several networking experiments while evaluating
+private-instance administration and outbound connectivity.
+
+Before finalizing the architecture, unused resources and rules were
+reviewed and removed.
+
+Cleanup included:
+
+-   removing unused SSM interface endpoints
+-   removing the unused `ssmmessages` interface endpoint
+-   removing the EC2 Instance Connect Endpoint
+-   deleting the previously created NAT Gateway
+-   removing the stale NAT `blackhole` route
+-   removing unnecessary Warehouse SSH rules
+-   removing unnecessary Warehouse HTTPS rules
+-   removing temporary EC2 Instance Connect-related access
+-   removing the unused public HTTPS Security Group rule because TLS was
+    not configured
+-   verifying the application after the cleanup
+
+This left the final application path significantly simpler:
+
+``` text
+Internet
+   |
+   v
+House :80
+   |
+   | private VPC traffic :3306
+   v
+Warehouse
+   |
+   v
+MySQL
 ```
 
-Final workflow:
+------------------------------------------------------------------------
 
-```text
-Developer
-   │
-   ▼
-git push
-   │
-   ▼
-GitHub
-   │
-   ▼
-CI Validation
-   │
-   ▼
-Automated Deployment
-   │
-   ▼
-Application Restart
-   │
-   ▼
-Verification
-```
+## 12. Security Controls
 
-This provides a repeatable deployment process and reduces manual operational steps.
+The final implementation demonstrates multiple security layers rather
+than relying on a single control.
 
----
+### Network isolation
 
-# 14. Monitoring & Operations
+The database resides in a private subnet without an active Internet
+default route.
 
-The project uses multiple levels of operational visibility.
+### Security Group references
 
-## Application Service
+Warehouse accepts MySQL traffic only from the House Security Group.
 
-```bash
-sudo systemctl status northstar
-```
+### Restricted application server
 
-## Application Logs
+Gunicorn listens only on:
 
-```bash
-sudo journalctl -u northstar
-```
-
-Live logs can be followed using:
-
-```bash
-sudo journalctl -u northstar -f
-```
-
-## Nginx
-
-Nginx access and error logs provide visibility into web requests and reverse-proxy failures.
-
-## AWS Monitoring
-
-Amazon CloudWatch provides infrastructure monitoring for AWS resources.
-
-Monitoring focuses on operational signals such as:
-
-- EC2 CPU utilization
-- Instance health
-- Application/service availability
-- Infrastructure resource utilization
-- Defined alarm thresholds
-
-This provides visibility across both the application and infrastructure layers.
-
----
-
-# 15. Troubleshooting & Operational Learning
-
-A major objective of this implementation was understanding how to troubleshoot an application across multiple infrastructure layers.
-
-The troubleshooting methodology used throughout the project was:
-
-```text
-Observe
-   │
-   ▼
-Identify the failing layer
-   │
-   ▼
-Inspect status/logs
-   │
-   ▼
-Form a hypothesis
-   │
-   ▼
-Validate
-   │
-   ▼
-Apply the fix
-   │
-   ▼
-Retest
-```
-
-Issues encountered during implementation included:
-
-- VPC and routing configuration
-- Security Group connectivity
-- Private database connectivity
-- MySQL service availability
-- Secrets Manager configuration
-- IAM authorization
-- Application configuration
-- Gunicorn startup
-- systemd service configuration
-- Nginx reverse proxy configuration
-- Public application port exposure
-
-### Example: Gunicorn/systemd Failure
-
-After modifying the Gunicorn binding configuration, the service failed.
-
-The first diagnostic step was:
-
-```bash
-sudo systemctl status northstar
-```
-
-The service showed:
-
-```text
-Active: failed
-```
-
-Application logs were then inspected:
-
-```bash
-sudo journalctl -u northstar -n 30 --no-pager
-```
-
-The logs revealed:
-
-```text
-Error: No application module specified.
-```
-
-The issue was traced to the Gunicorn `ExecStart` definition in the systemd service.
-
-After correcting the service configuration:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl restart northstar
-```
-
-the application returned to:
-
-```text
-Active: active (running)
-```
-
-This demonstrated the importance of identifying the failing layer before making unrelated networking or infrastructure changes.
-
----
-
-# 16. Security Controls
-
-The implementation applies several security principles.
-
-### Network Segmentation
-
-```text
-Application Tier → Public Subnet
-Database Tier    → Private Subnet
-```
-
-### Database Isolation
-
-MySQL is not exposed to the public Internet.
-
-Only the application tier is permitted to connect to TCP `3306`.
-
-### Application Server Isolation
-
-Gunicorn listens on:
-
-```text
+``` text
 127.0.0.1:5000
 ```
 
-rather than the EC2 instance's externally reachable interface.
+and port 5000 is not exposed publicly.
 
-### Restricted Public Ports
+### Reverse proxy
 
-The application Security Group does not expose TCP `5000`.
+Nginx is the public application entry point rather than exposing the
+Flask development server or Gunicorn directly.
 
-External application traffic enters through Nginx.
+### IAM role authentication
 
-### Secrets Management
+House accesses AWS Secrets Manager through an IAM role rather than
+static AWS credentials.
 
-Database credentials are retrieved from AWS Secrets Manager rather than being stored directly in application source code.
+### Secrets Manager
 
-### IAM Roles
+Database credentials are retrieved at runtime rather than hardcoded into
+the application.
 
-The EC2 application server uses an IAM instance role instead of long-lived AWS credentials.
+### Parameterized SQL
 
-### Least Privilege
+Application database operations use parameterized SQL queries.
 
-The application IAM policy is scoped to the AWS permissions required by the application.
+### Repository security review
 
-### Administrative Access
+Git history was checked for:
 
-SSH access is restricted to approved administrative sources rather than being universally accessible.
+-   the earlier development database password
+-   OpenSSH/private-key material
+-   AWS access-key patterns
+-   AWS secret-access-key patterns
 
----
+No matches were found during the final review.
 
-# 17. Technology Stack
+------------------------------------------------------------------------
 
-| Layer | Technology |
-|---|---|
-| Cloud Platform | AWS |
-| Network | Amazon VPC |
-| Compute | Amazon EC2 |
-| Network Security | Security Groups |
-| AWS Authorization | IAM |
-| Secrets | AWS Secrets Manager |
-| Application | Python / Flask |
-| Templates | Jinja2 |
-| Database | MySQL |
-| Database Client | PyMySQL |
-| Application Server | Gunicorn |
-| Web Server | Nginx |
-| Linux Service Management | systemd |
-| Source Control | Git / GitHub |
-| CI/CD | GitHub Actions |
-| Monitoring | Amazon CloudWatch |
-| Operating System | Ubuntu Linux |
+## 13. Troubleshooting Experience
 
----
+A major goal of this project was to understand failure paths rather than
+only create a working architecture.
 
-# 18. Architecture Responsibilities
+Issues investigated during the implementation included:
 
-Each component has a clearly defined responsibility.
+-   EC2 connectivity and routing
+-   Security Group source rules
+-   public versus private subnet behaviour
+-   NAT Gateway cost and routing
+-   stale blackhole routes
+-   VPC endpoint connectivity
+-   MySQL connectivity across subnets
+-   application failures when the database instance was stopped
+-   Secrets Manager JSON/key mismatch
+-   IAM permissions
+-   Gunicorn configuration
+-   malformed systemd `ExecStart`
+-   Nginx reverse proxy configuration
+-   GitHub Actions runner SSH reachability
+-   malformed multiline SSH private-key secrets
+-   unnecessary infrastructure and Security Group rules
 
-```text
-Nginx
-  └── Handles incoming web traffic
-             │
-             ▼
-Gunicorn
-  └── Runs the Python application
-             │
-             ▼
-Flask
-  └── Implements application logic
-             │
-             ▼
-PyMySQL
-  └── Communicates with MySQL
+The troubleshooting approach used throughout the project was to follow
+the request path layer by layer:
+
+``` text
+DNS / address
+   |
+Routing
+   |
+Security Group
+   |
+Listening port
+   |
+Process/service
+   |
+Application
+   |
+Credentials/IAM
+   |
+Database/dependency
 ```
 
-Supporting infrastructure:
+------------------------------------------------------------------------
 
-```text
-systemd
-  └── Manages the Gunicorn process
+## 14. Technology Stack
 
-IAM
-  └── Controls AWS authorization
+  -----------------------------------------------------------------------
+  Area                                Technology
+  ----------------------------------- -----------------------------------
+  Cloud                               AWS
 
-Secrets Manager
-  └── Protects database credentials
+  Networking                          VPC, Subnets, Route Tables,
+                                      Internet Gateway, Security Groups
 
-Security Groups
-  └── Control network traffic
+  Compute                             Amazon EC2
 
-GitHub Actions
-  └── Automates CI/CD
+  OS                                  Ubuntu 24.04 LTS
 
-CloudWatch
-  └── Provides infrastructure monitoring
+  Web Server                          Nginx
+
+  Application Server                  Gunicorn
+
+  Application                         Python, Flask, Jinja
+
+  Database                            MySQL
+
+  DB Client                           PyMySQL
+
+  Secrets                             AWS Secrets Manager
+
+  Identity                            AWS IAM Role
+
+  Monitoring                          Amazon CloudWatch
+
+  Alerting                            Amazon SNS
+
+  CI/CD                               GitHub Actions
+
+  Service Management                  systemd
+
+  Version Control                     Git / GitHub
+  -----------------------------------------------------------------------
+
+------------------------------------------------------------------------
+
+## 15. Project Structure
+
+``` text
+northstar-employee-portal/
+├── .github/
+│   └── workflows/
+│       └── deploy.yml
+├── static/
+│   └── style.css
+├── templates/
+│   ├── add.html
+│   ├── base.html
+│   ├── delete.html
+│   ├── edit.html
+│   ├── employees.html
+│   └── home.html
+├── app.py
+├── README.md
+└── requirements.txt
 ```
 
-The architecture deliberately separates responsibilities instead of exposing or combining every component into a single layer.
+------------------------------------------------------------------------
 
----
+## 16. Known Limitations and Production Improvements
 
-# 19. Key DevOps Learnings
+This repository demonstrates the architecture and operational concepts
+in a controlled portfolio environment. It should not be interpreted as a
+complete production reference architecture.
 
-This implementation reinforced that deploying an application involves significantly more than making the application code run.
+### HTTPS
 
-A production-style request crosses multiple layers:
+The current application is served over HTTP on port 80.
 
-```text
-Code
-  ↓
-Application Framework
-  ↓
-Application Server
-  ↓
-Process Manager
-  ↓
-Web Server
-  ↓
-Operating System
-  ↓
-Network
-  ↓
-Security Controls
-  ↓
-Cloud Infrastructure
-  ↓
-Database
-  ↓
-Monitoring
-  ↓
-Deployment Automation
+For production, TLS should be implemented and public application traffic
+should use HTTPS on port 443, with HTTP redirected to HTTPS.
+
+A common production evolution would be:
+
+``` text
+Internet
+   |
+   | HTTPS :443
+   v
+Application Load Balancer
+   |
+   v
+Private application instances
 ```
 
-A problem at any layer can affect application availability.
+### CI/CD SSH exposure
 
-The key operational skill is therefore not only knowing individual AWS or Linux services, but being able to trace a request across the architecture, identify the failing layer, use logs and monitoring to validate the problem, and restore service systematically.
+The current GitHub-hosted deployment workflow requires inbound SSH
+connectivity to House. For the lab, this resulted in broader SSH network
+exposure than would be desirable in production.
 
----
+A production implementation should avoid broadly exposed administrative
+SSH and use a more controlled deployment path, such as a
+private/self-hosted runner, AWS-native deployment mechanisms, or another
+restricted management channel.
 
-# 20. Final Architecture
+### High availability
 
-```text
-                         Developer
-                             │
-                          git push
-                             │
-                             ▼
-                          GitHub
-                             │
-                             ▼
-                    GitHub Actions
-                       CI / CD
-                             │
-                             ▼
-──────────────────────────── AWS ───────────────────────────
+Northstar currently uses single application and database EC2 instances.
 
-                          Internet
-                             │
-                             ▼
-                    Internet Gateway
-                    WorldConnection
-                             │
-                             ▼
-               ┌─────────────────────────┐
-               │      Rabbit World       │
-               │      10.0.0.0/18        │
-               │                         │
-               │   PUBLIC - Locality1    │
-               │                         │
-               │      Entry_rules_1      │
-               │             │           │
-               │             ▼           │
-               │           HOUSE         │
-               │             │           │
-               │        Nginx :80        │
-               │             │           │
-               │     127.0.0.1:5000      │
-               │             │           │
-               │         Gunicorn        │
-               │        3 Workers        │
-               │             │           │
-               │           Flask         │
-               │             │           │
-               │       ┌─────┴─────┐     │
-               │       │           │     │
-               │       ▼           ▼     │
-               │     IAM       Secrets   │
-               │     Role      Manager   │
-               │                   │     │
-               │             Credentials │
-               │                   │     │
-               │                   ▼     │
-               │                PyMySQL   │
-               │                   │     │
-               │              TCP :3306  │
-               │                   │     │
-               │                   ▼     │
-               │ PRIVATE - Locality2     │
-               │                   │     │
-               │             Entry_rules_2
-               │                   │     │
-               │                   ▼     │
-               │               WAREHOUSE │
-               │                   │     │
-               │                 MySQL   │
-               │                   │     │
-               │             WAREHOUSE_APP
-               │                         │
-               └─────────────────────────┘
+A production architecture would typically distribute workloads across
+multiple Availability Zones and could use:
+
+``` text
+Internet
+   |
+   v
+ALB
+  / \
+ /   \
+App  App
+AZ-A AZ-B
+  \   /
+   \ /
+ RDS Multi-AZ
 ```
 
----
+### Database management
 
-## Disclaimer
+The portfolio implementation intentionally uses MySQL on EC2 to
+demonstrate private-subnet connectivity and database administration.
 
-This repository is a **sanitized portfolio representation of a real-world client implementation**.
+A production workload could use Amazon RDS depending on operational,
+availability, backup, scaling, and cost requirements.
 
-`Northstar Logistics Pte. Ltd.`, employee identities, employee records, resource names, IP addresses, account information, credentials, and other identifying information presented for demonstration purposes are fictional, synthetic, anonymized, or recreated.
+### Infrastructure as Code
 
-No client confidential information or actual employee personal data is intended to be published in this repository.
+The current version was built manually to strengthen understanding of
+AWS networking and troubleshooting.
 
-The repository is intended solely to demonstrate Cloud, AWS, DevOps, Linux, deployment, security, CI/CD, monitoring, and troubleshooting practices.
+A future iteration could reproduce the architecture using Terraform with
+reusable modules, remote state, and environment separation.
+
+### Observability
+
+Current monitoring focuses on EC2 CPU utilization and SNS notification.
+
+A production observability design could additionally include:
+
+-   centralized application and Nginx logs
+-   memory and disk metrics
+-   HTTP latency and error-rate metrics
+-   dashboards
+-   additional infrastructure alarms
+-   application health checks
+
+------------------------------------------------------------------------
+
+## 17. Key Engineering Takeaways
+
+This project reinforced several practical Cloud/DevOps principles:
+
+**A route provides a path; a Security Group decides whether traffic is
+allowed.**
+
+**Opening a Security Group port does not create a service. A process
+still needs to be listening on that port.**
+
+**A private subnet does not need NAT for communication with another
+subnet in the same VPC.**
+
+**Public application traffic and private database traffic should have
+different security boundaries.**
+
+**IAM roles are preferable to long-lived AWS access keys for workloads
+running on EC2.**
+
+**Secrets should be retrieved securely rather than embedded in
+application source code.**
+
+**CI and CD are separate concerns: validate first, deploy only after
+validation succeeds.**
+
+**Monitoring turns a running system into an operable system.**
+
+**Removing unused infrastructure is part of engineering, not an
+afterthought.**
+
+Most importantly, successful deployment is not the end of the work.
+Understanding the complete request path makes troubleshooting much more
+systematic:
+
+``` text
+User
+ -> Network
+ -> Security
+ -> Web server
+ -> Application server
+ -> Application
+ -> IAM / Secrets
+ -> Database
+ -> Response
 ```
+
+------------------------------------------------------------------------
+
+## 18. Disclaimer
+
+This repository is a sanitized portfolio recreation based on a
+real-world client implementation.
+
+`Northstar Logistics Pte. Ltd.` and the employee records used in this
+repository are fictional/synthetic. Real client names, personal data,
+credentials, AWS account identifiers, production IP addresses, and other
+identifying information are intentionally excluded.
+
+The repository is intended solely to demonstrate Cloud/DevOps
+architecture, implementation, security, deployment, monitoring, and
+troubleshooting practices.
