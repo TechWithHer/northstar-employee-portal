@@ -1,11 +1,15 @@
-check "subnet_list_lengths" {
-  assert {
-    condition = (
-      length(var.availability_zones) == length(var.public_subnet_cidrs) &&
-      length(var.availability_zones) == length(var.private_app_subnet_cidrs) &&
-      length(var.availability_zones) == length(var.private_db_subnet_cidrs)
-    )
+resource "terraform_data" "validate_subnet_lengths" {
+  input = length(var.availability_zones)
 
-    error_message = "Each subnet CIDR list must contain exactly one entry per Availability Zone."
+  lifecycle {
+    precondition {
+      condition = (
+        length(var.availability_zones) == length(var.public_subnet_cidrs) &&
+        length(var.availability_zones) == length(var.private_app_subnet_cidrs) &&
+        length(var.availability_zones) == length(var.private_db_subnet_cidrs)
+      )
+
+      error_message = "Each subnet CIDR list must contain exactly one CIDR per Availability Zone."
+    }
   }
 }
