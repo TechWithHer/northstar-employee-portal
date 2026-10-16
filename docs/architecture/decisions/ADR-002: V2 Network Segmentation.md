@@ -105,3 +105,37 @@ requirement.
   decision.
 - Multi-AZ architecture may introduce additional infrastructure and
   cross-AZ traffic costs.
+
+  ## Implementation & Validation — 2026-10-15
+
+**Status:** Networking deployed; routing verified.
+
+Northstar V2 networking was provisioned using Terraform in AWS Region `ap-south-1`.
+
+### Deployed Infrastructure
+
+- VPC: `vpc-0d7d6f05b2517bd06`
+- VPC CIDR: `10.0.0.0/16`
+- Six subnets across two Availability Zones
+- One Internet Gateway: `igw-0319d8b30385c1324`
+- Three custom route tables: Public, Private App, and Private DB
+- Six subnet-to-route-table associations
+- No NAT Gateway deployed
+
+### Routing Validation
+
+- Public route table contains an active default route (`0.0.0.0/0`) to the Internet Gateway.
+- Public route table is associated with two subnets.
+- Private App route table contains only the VPC-local route (`10.0.0.0/16`) and has two subnet associations.
+- Private DB route table contains only the VPC-local route (`10.0.0.0/16`) and has two subnet associations.
+- Terraform reconciliation returned: **No changes. Your infrastructure matches the configuration.**
+
+### Validation Limitations
+
+- The complete subnet CIDR-to-Availability-Zone mappings have not yet been captured in the verification record.
+- No application EC2 instances, Application Load Balancer, or RDS database have been deployed as part of V2.
+- End-to-end connectivity and application availability have not yet been tested.
+
+### Outcome
+
+The deployed network matches the intended public and private routing design. It provides the infrastructure foundation for subsequent private compute, load balancing, and database deployment.

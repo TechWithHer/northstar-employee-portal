@@ -1,0 +1,63 @@
+# Terraform local working directory
+terraform/.terraform/*
+
+# Terraform state files
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/*.tfstate.backup
+
+# Terraform execution plans
+terraform/*.tfplan
+terraform/tfplan
+terraform/tfplan.*
+
+# Terraform crash logs
+terraform/crash.log
+terraform/crash.*.log
+
+# Sensitive Terraform variables
+terraform/*.tfvars
+terraform/*.tfvars.json
+terraform/*.auto.tfvars
+terraform/*.auto.tfvars.json
+terraform/override.tf
+terraform/override.tf.json
+terraform/*_override.tf
+terraform/*_override.tf.json
+
+# AWS credentials and environment secrets
+.env
+.env.*
+!.env.example
+.aws/
+credentials
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# macOS and editors
+.DS_Store
+.vscode/
+.idea/
+
+cat >> .gitignore <<'EOF'
+
+# Terraform generated files
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+tfplan.*
+*.tfvars
+*.tfvars.json
+*.auto.tfvars
+*.auto.tfvars.json
+
+# Local AWS credentials
+northstar-terraform-operator.txt

@@ -24,7 +24,19 @@ The backend will use:
 - Restricted IAM permissions
 - Native S3 state locking, subject to Terraform version compatibility
 
-The S3 bucket name and state object key will be finalized during backend implementation.
+The Terraform remote state backend has been configured with the following values:
+
+- **S3 bucket:** `northstar-v2-tfstate`
+- **AWS Region:** `ap-south-1`
+- **State object key:** `northstar/v2/networking/terraform.tfstate`
+- **Encryption:** Enabled through the Terraform backend configuration
+- **State locking:** Native S3 locking using `use_lockfile = true`
+- **Terraform version:** `1.16.1`
+
+The backend was successfully initialized, and Terraform was used to deploy the V2 networking infrastructure. A subsequent Terraform plan reported no infrastructure changes.
+
+Backend initialization and infrastructure reconciliation have been verified. A separate concurrent-operation test of state locking has not yet been recorded.
+
 
 ## Alternatives Considered
 
